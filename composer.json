@@ -1,11 +1,11 @@
 {
-  "name": "oro/commerce-crm-application",
-  "description": "OroCommerce - an open-source Business to Business Commerce application.\\This package contains a sample application.",
+  "name": "ubiedigital/crm",
+  "description": "OroCRM Commerce fork by UbieDigital.",
   "license": "OSL-3.0",
   "authors": [
     {
-      "name": "Oro, Inc",
-      "homepage": "https://www.orocommerce.com"
+      "name": "UbieDigital",
+      "homepage": "https://ubiedigital.com"
     }
   ],
   "autoload": {
