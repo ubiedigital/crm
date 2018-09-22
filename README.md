@@ -21,3 +21,7 @@ License
 -------
  
 [OSL-3.0](LICENSE) Copyright (c) 2015 - 2017, Oro, Inc.
+
+Troubleshoot
+------------
+* If you receive memory limit exhausted, please clear cache and run `php bin/console oro:entity-config:update --force`
