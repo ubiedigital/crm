@@ -9,6 +9,31 @@
     <property file="build.properties"/>
 
     <target name="variables">
+        <if>
+            <isset property="env.ENVIRONMENT"/>
+            <then>
+                <property name="build.environment" value="${env.ENVIRONMENT}"/>
+            </then>
+        </if>
+        <if>
+            <isset property="env.DEPLOY_HOST"/>
+            <then>
+                <property name="deploy.host" value="${env.DEPLOY_HOST}"/>
+            </then>
+        </if>
+        <if>
+            <isset property="env.DEPLOY_PORT"/>
+            <then>
+                <property name="deploy.port" value="${env.DEPLOY_PORT}"/>
+            </then>
+        </if>
+        <if>
+            <isset property="env.DEPLOY_USERNAME"/>
+            <then>
+                <property name="deploy.username" value="${env.DEPLOY_USERNAME}"/>
+            </then>
+        </if>
+
         <property name="build.archive" value="${build.release}.tar.gz"/>
         <property name="build.dir" value="build"/>
         <property name="build.path" value="./${build.dir}"/>
@@ -55,6 +80,7 @@
 
     <target name="build" depends="prepare">
         <phingcall target="build:parameters"/>
+        <phingcall target="build:environment"/>
 
         <echo msg="Running composer install..."/>
         <exec command="wget https://getcomposer.org/composer.phar -P ${build.release_path}" passthru="true"/>
@@ -100,6 +126,25 @@
                 </copy>
             </then>
         </if>
+    </target>
+
+    <target name="build:environment">
+        <echo msg="Building environment..."/>
+
+        <property name="build.htaccess_suffix" value="_dev"/>
+        <if>
+            <equals arg1="${build.environment}" arg2="prod"/>
+            <then>
+                <property name="build.htaccess_suffix" value=""/>
+            </then>
+        </if>
+        <copy file="${build.release_path}/web/.htaccess.dist" tofile="${build.release_path}/web/.htaccess" overwrite="true">
+            <filterchain>
+                <replacetokens begintoken="##" endtoken="##">
+                    <token key="ENVIRONMENT" value="${build.htaccess_suffix}" />
+                </replacetokens>
+            </filterchain>
+        </copy>
     </target>
 
     <target name="deploy" depends="variables">
