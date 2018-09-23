@@ -4,6 +4,8 @@
 /.idea
 /node_modules
 /composer.phar
+build.properties
+build.parameters.properties
 composer.lock
 behat.yml
 /var/*
@@ -22,7 +24,7 @@ behat.yml
 !var/php/
 !var/oro-check.php
 !var/OroRequirements.php
-/build/logs/*
+/build
 /vendor
 node_modules/
 /cov

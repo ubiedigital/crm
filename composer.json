@@ -50,7 +50,8 @@
     "sebastian/phpcpd": "3.0.*",
     "phpunit/phpcov": "4.0.*",
     "symfony/phpunit-bridge": "3.4.*",
-    "friendsofphp/php-cs-fixer": "2.12.*"
+    "friendsofphp/php-cs-fixer": "2.12.*",
+    "phing/phing": "2.*"
   },
   "config": {
     "component-dir": "public/bundles/components",
@@ -85,7 +86,23 @@
     "symfony-bin-dir": "bin",
     "symfony-tests-dir": "tests",
     "incenteev-parameters": {
-      "file": "config/parameters.yml"
+      "file": "config/parameters.yml",
+      "env-map": {
+        "database_host": "DATABASE_HOST",
+        "database_port": "DATABASE_PORT",
+        "database_name": "DATABASE_NAME",
+        "database_user": "DATABASE_USER",
+        "database_password": "DATABASE_PASSWORD",
+        "mailer_transport": "MAILER_TRANSPORT",
+        "mailer_host": "MAILER_HOST",
+        "mailer_port": "MAILER_PORT",
+        "mailer_encryption": "MAILER_ENCRYPTION",
+        "mailer_user": "MAILER_USER",
+        "mailer_password": "MAILER_PASSWORD",
+        "web_backend_prefix": "WEB_BACKEND_PREFIX",
+        "secret": "SECRET",
+        "installed": "INSTALLED"
+      }
     }
   }
 }

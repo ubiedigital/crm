@@ -1,0 +1,15 @@
+build.parameters.database_host = null
+build.parameters.database_port = null
+build.parameters.database_name = null
+build.parameters.database_user = null
+build.parameters.database_password = null
+build.parameters.mailer_transport = null
+build.parameters.mailer_host = null
+build.parameters.mailer_port = null
+build.parameters.mailer_encryption = null
+build.parameters.mailer_user = null
+build.parameters.mailer_password = null
+build.parameters.web_backend_prefix = null
+build.parameters.locale = null
+build.parameters.secret = null
+build.parameters.installed = null

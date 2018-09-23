@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project name="UbieDigital CRM" default="deploy">
+    <tstamp>
+        <format property="build.timestamp" pattern="%Y%m%d%H%M%S"/>
+    </tstamp>
+    <property name="build.release" value="${build.timestamp}"/>
+
+    <property file="build.properties"/>
+
+    <target name="variables">
+        <property name="build.archive" value="${build.release}.tar.gz"/>
+        <property name="build.dir" value="build"/>
+        <property name="build.path" value="./${build.dir}"/>
+        <property name="build.release_path" value="${build.path}/${build.release}"/>
+        <property name="build.archive_path" value="${build.path}/${build.archive}"/>
+    </target>
+
+    <target name="prepare" depends="variables">
+        <echo msg="Making build directory"/>
+        <mkdir dir="${build.release_path}"/>
+
+        <echo msg="Copying files to build directory..."/>
+        <copy todir="${build.release_path}">
+            <fileset dir=".">
+                <include name="**"/>
+                <exclude name="config/parameters.yml"/>
+                <exclude name="config/parameters_test.yml"/>
+                <exclude name="var/attachment/*"/>
+                <exclude name="var/attachment"/>
+                <exclude name="var/cache/**"/>
+                <exclude name="var/cache"/>
+                <exclude name="var/logs/*"/>
+                <exclude name="var/logs"/>
+                <exclude name="var/sessions/*"/>
+                <exclude name="var/sessions"/>
+                <exclude name="var/import_export/*"/>
+                <exclude name="var/import_export"/>
+                <exclude name="public/bundles/**"/>
+                <exclude name="public/images/**"/>
+                <exclude name="public/images"/>
+                <exclude name="public/media/**"/>
+                <exclude name="public/media"/>
+                <exclude name="public/uploads/**"/>
+                <exclude name="public/uploads"/>
+                <exclude name="build/**"/>
+                <exclude name="vendor/**"/>
+                <exclude name=".idea/**"/>
+                <exclude name=".gitlab-ci"/>
+                <exclude name=".gitignore"/>
+                <exclude name=".gitkeep"/>
+            </fileset>
+        </copy>
+    </target>
+
+    <target name="build" depends="prepare">
+        <phingcall target="build:parameters"/>
+
+        <echo msg="Running composer install..."/>
+        <exec command="wget https://getcomposer.org/composer.phar -P ${build.release_path}" passthru="true"/>
+        <exec command="cd ${build.release_path} &amp;&amp; ${php.bin} ${composer.command}" passthru="true"/>
+
+        <echo msg="Creating archive..."/>
+        <tar destfile="${build.archive_path}" compression="gzip">
+            <fileset dir="${build.release_path}">
+                <include name="*"/>
+            </fileset>
+        </tar>
+
+        <echo msg="Build process is done."/>
+    </target>
+
+    <target name="build:parameters" depends="variables">
+        <available file="build.parameters.properties" property="build.parameters.properties.exists"/>
+        <if>
+            <equals arg1="${build.parameters.properties.exists}" arg2="true"/>
+            <then>
+                <echo msg="Building parameters file..."/>
+                <property file="build.parameters.properties"/>
+                <copy file="${build.release_path}/config/parameters.yml.dist" tofile="${build.release_path}/config/parameters.yml" overwrite="true">
+                    <filterchain>
+                        <replacetokens begintoken="##" endtoken="##">
+                            <token key="DATABASE_HOST" value="${build.parameters.database_host}" />
+                            <token key="DATABASE_PORT" value="${build.parameters.database_port}" />
+                            <token key="DATABASE_NAME" value="${build.parameters.database_name}" />
+                            <token key="DATABASE_USER" value="${build.parameters.database_user}" />
+                            <token key="DATABASE_PASSWORD" value="${build.parameters.database_password}" />
+                            <token key="MAILER_TRANSPORT" value="${build.parameters.mailer_transport}" />
+                            <token key="MAILER_HOST" value="${build.parameters.mailer_host}" />
+                            <token key="MAILER_PORT" value="${build.parameters.mailer_port}" />
+                            <token key="MAILER_ENCRYPTION" value="${build.parameters.mailer_encryption}" />
+                            <token key="MAILER_USER" value="${build.parameters.mailer_user}" />
+                            <token key="MAILER_PASSWORD" value="${build.parameters.mailer_password}" />
+                            <token key="WEB_BACKEND_PREFIX" value="${build.parameters.web_backend_prefix}" />
+                            <token key="LOCALE" value="${build.parameters.locale}" />
+                            <token key="SECRET" value="${build.parameters.secret}" />
+                            <token key="INSTALLED" value="${build.parameters.installed}" />
+                        </replacetokens>
+                    </filterchain>
+                </copy>
+            </then>
+        </if>
+    </target>
+
+    <target name="deploy" depends="variables">
+        <echo msg="Checking for build (${build.archive_path})..."/>
+        <available file="${build.archive_path}" property="build.exists"/>
+        <if>
+            <not>
+                <equals arg1="${build.exists}" arg2="true"/>
+            </not>
+            <then>
+                <echo msg="Build file does not exist, starting build process..."/>
+                <phingcall target="build"/>
+            </then>
+        </if>
+        <echo msg="Deploying build..."/>
+        <phingcall target="deploy:upload"/>
+    </target>
+
+    <target name="deploy:upload" hidden="true">
+        <echo>Preparing directories</echo>
+        <phingcall target="deploy:command">
+            <property name="command" value="rm -Rf ${deploy.releases_dir}/${build.release}"/>
+        </phingcall>
+        <phingcall target="deploy:command">
+            <property name="command" value="mkdir -p ${deploy.releases_dir}/${build.release}"/>
+        </phingcall>
+
+        <echo>Copying package</echo>
+        <scp host="${deploy.host}"
+             port="${deploy.port}"
+             username="${deploy.username}"
+             password="${deploy.password}"
+             todir="${deploy.path}/${deploy.releases_dir}"
+             file="${build.archive_path}"/>
+
+        <echo>Extracting package</echo>
+        <phingcall target="deploy:command">
+            <property name="command"
+                      value="cd ${deploy.releases_dir} &amp;&amp; tar -xzf ${build.archive} -C ./${build.release}"/>
+        </phingcall>
+
+        <echo>Creating symbolic links</echo>
+        <phingcall target="deploy:symlink">
+            <property name="source" value="../../../${deploy.shared_dir}/var/attachment"/>
+            <property name="destination" value="${deploy.releases_dir}/${build.release}/var/attachment"/>
+        </phingcall>
+        <phingcall target="deploy:symlink">
+            <property name="source" value="../../../${deploy.shared_dir}/var/cache"/>
+            <property name="destination" value="${deploy.releases_dir}/${build.release}/var/cache"/>
+        </phingcall>
+        <phingcall target="deploy:symlink">
+            <property name="source" value="../../../${deploy.shared_dir}/var/logs"/>
+            <property name="destination" value="${deploy.releases_dir}/${build.release}/var/logs"/>
+        </phingcall>
+        <phingcall target="deploy:symlink">
+            <property name="source" value="../../../${deploy.shared_dir}/var/sessions"/>
+            <property name="destination" value="${deploy.releases_dir}/${build.release}/var/sessions"/>
+        </phingcall>
+        <phingcall target="deploy:symlink">
+            <property name="source" value="../../../${deploy.shared_dir}/var/import_export"/>
+            <property name="destination" value="${deploy.releases_dir}/${build.release}/var/import_export"/>
+        </phingcall>
+        <phingcall target="deploy:symlink">
+            <property name="source" value="../../../${deploy.shared_dir}/public/images"/>
+            <property name="destination" value="${deploy.releases_dir}/${build.release}/public/images"/>
+        </phingcall>
+        <phingcall target="deploy:symlink">
+            <property name="source" value="../../../${deploy.shared_dir}/public/media"/>
+            <property name="destination" value="${deploy.releases_dir}/${build.release}/public/media"/>
+        </phingcall>
+        <phingcall target="deploy:symlink">
+            <property name="source" value="../../../${deploy.shared_dir}/public/uploads"/>
+            <property name="destination" value="${deploy.releases_dir}/${build.release}/public/uploads"/>
+        </phingcall>
+        <phingcall target="deploy:symlink">
+            <property name="source" value="./${deploy.releases_dir}/${build.release}"/>
+            <property name="destination" value="${deploy.docroot_dir}"/>
+        </phingcall>
+    </target>
+
+    <target name="deploy:command" hidden="true">
+        <echo>Executing command '${command}' in ${deploy.path}</echo>
+        <ssh host="${deploy.host}"
+             port="${deploy.port}"
+             username="${deploy.username}"
+             password="${deploy.password}"
+             command="cd ${deploy.path} &amp;&amp; ${command}"
+             failonerror="true"
+        />
+    </target>
+
+    <target name="deploy:symlink" hidden="true">
+        <echo>Creating symlink '${source}' to '${destination}'</echo>
+        <ssh host="${deploy.host}"
+             port="${deploy.port}"
+             username="${deploy.username}"
+             password="${deploy.password}"
+             command="cd ${deploy.path} &amp;&amp; rm -Rf ${destination} &amp;&amp; ln -sf ${source} ${destination}"
+             failonerror="true"
+        />
+    </target>
+</project>
