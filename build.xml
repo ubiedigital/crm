@@ -1,47 +1,129 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <project name="UbieDigital CRM" default="deploy">
+    <!---
+        VARIABLES SECTION
+    -->
+
+    <!---
+        Default variables
+    -->
+    <property name="php.bin" value="php"/>
+    <property name="composer.command" value="composer.phar install --prefer-dist --no-dev"/>
+
+    <property name="environment" value="dev" override="true"/>
+
+    <property name="deploy.reference" value="null"/>
+    <property name="deploy.releases_dir" value="releases"/>
+    <property name="deploy.docroot_dir" value="current"/>
+    <property name="deploy.shared_dir" value="shared"/>
+
     <tstamp>
         <format property="build.timestamp" pattern="%Y%m%d%H%M%S"/>
     </tstamp>
     <property name="build.release" value="${build.timestamp}"/>
 
-    <property file="build.properties"/>
-
+    <!---
+        Here we process all variables, based on environment and properties file variables
+    -->
     <target name="variables">
+        <available file="build.${environment}.properties" property="build.properties.exists"/>
         <if>
-            <isset property="env.ENVIRONMENT"/>
+            <equals arg1="${build.properties.exists}" arg2="true"/>
             <then>
-                <property name="build.environment" value="${env.ENVIRONMENT}"/>
+                <property file="build.${environment}.properties" override="true"/>
             </then>
         </if>
         <if>
+            <isset property="env.ENVIRONMENT"/>
+            <then>
+                <property name="environment" value="${env.ENVIRONMENT}" override="true"/>
+            </then>
+        </if>
+
+        <property name="build.archive" value="${build.release}.tar.gz" override="true"/>
+        <property name="build.dir" value="build" override="true"/>
+        <property name="build.path" value="./${build.dir}" override="true"/>
+        <property name="build.release_path" value="${build.path}/${build.release}" override="true"/>
+        <property name="build.archive_path" value="${build.path}/${build.archive}" override="true"/>
+
+        <if>
             <isset property="env.DEPLOY_HOST"/>
             <then>
-                <property name="deploy.host" value="${env.DEPLOY_HOST}"/>
+                <property name="deploy.host" value="${env.DEPLOY_HOST}" override="true"/>
             </then>
         </if>
         <if>
             <isset property="env.DEPLOY_PORT"/>
             <then>
-                <property name="deploy.port" value="${env.DEPLOY_PORT}"/>
+                <property name="deploy.port" value="${env.DEPLOY_PORT}" override="true"/>
             </then>
         </if>
         <if>
-            <isset property="env.DEPLOY_USERNAME"/>
+            <isset property="env.DEPLOY_USER"/>
             <then>
-                <property name="deploy.username" value="${env.DEPLOY_USERNAME}"/>
+                <property name="deploy.user" value="${env.DEPLOY_USER}" override="true"/>
             </then>
         </if>
+        <if>
+            <isset property="env.DEPLOY_PATH"/>
+            <then>
+                <property name="deploy.path" value="${env.DEPLOY_PATH}" override="true"/>
+            </then>
+        </if>
+        <if>
+            <isset property="env.DEPLOY_REFERENCE"/>
+            <then>
+                <property name="deploy.reference" value="${env.DEPLOY_REFERENCE}" override="true"/>
+            </then>
+        </if>
+        <if>
+            <not>
+                <equals arg1="${deploy.reference}" arg2="null"/>
+            </not>
+            <then>
+                <property name="deploy.path" value="${deploy.path}/${deploy.reference}" override="true"/>
+            </then>
+        </if>
+        <property name="deploy.releases_path" value="${deploy.path}/${deploy.releases_dir}" override="true"/>
+        <property name="deploy.release_path" value="${deploy.releases_path}/${build.release}" override="true"/>
+        <property name="deploy.shared_path" value="${deploy.path}/${deploy.shared_dir}" override="true"/>
 
-        <property name="build.archive" value="${build.release}.tar.gz"/>
-        <property name="build.dir" value="build"/>
-        <property name="build.path" value="./${build.dir}"/>
-        <property name="build.release_path" value="${build.path}/${build.release}"/>
-        <property name="build.archive_path" value="${build.path}/${build.archive}"/>
+        <echo msg="Variables has been set"/>
     </target>
 
-    <target name="prepare" depends="variables">
+    <!---
+        BUILD SECTION
+    -->
+
+    <!---
+        Main build executor
+    -->
+    <target name="build" depends="build:prepare">
+        <phingcall target="build:parameters"/>
+        <phingcall target="build:environment"/>
+
+        <echo msg="Running composer install..."/>
+        <exec command="wget https://getcomposer.org/composer.phar -P ${build.release_path}" passthru="true"/>
+        <exec command="cd ${build.release_path} &amp;&amp; ${php.bin} ${composer.command}" passthru="true"/>
+
+        <echo msg="Creating archive..."/>
+        <tar destfile="${build.archive_path}" compression="gzip">
+            <fileset dir="${build.release_path}">
+                <include name="*"/>
+            </fileset>
+        </tar>
+
+        <echo msg="Removing no longer needed build files..."/>
+        <exec command="rm -r ${build.release_path}" passthru="true"/>
+
+        <echo msg="Build process is done."/>
+    </target>
+
+    <!---
+        Prepares all files for build
+    -->
+    <target name="build:prepare" depends="variables">
         <echo msg="Making build directory"/>
         <mkdir dir="${build.release_path}"/>
 
@@ -57,8 +139,6 @@
                 <exclude name="var/cache"/>
                 <exclude name="var/logs/*"/>
                 <exclude name="var/logs"/>
-                <exclude name="var/sessions/*"/>
-                <exclude name="var/sessions"/>
                 <exclude name="var/import_export/*"/>
                 <exclude name="var/import_export"/>
                 <exclude name="public/bundles/**"/>
@@ -71,56 +151,47 @@
                 <exclude name="build/**"/>
                 <exclude name="vendor/**"/>
                 <exclude name=".idea/**"/>
-                <exclude name=".gitlab-ci"/>
+                <exclude name=".docker/**"/>
+                <exclude name=".docker"/>
+                <exclude name=".ssh/*"/>
+                <exclude name=".ssh"/>
                 <exclude name=".gitignore"/>
+                <exclude name=".gitlab-ci.yml"/>
+                <exclude name="docker-compose.yml"/>
                 <exclude name=".gitkeep"/>
             </fileset>
         </copy>
     </target>
 
-    <target name="build" depends="prepare">
-        <phingcall target="build:parameters"/>
-        <phingcall target="build:environment"/>
-
-        <echo msg="Running composer install..."/>
-        <exec command="wget https://getcomposer.org/composer.phar -P ${build.release_path}" passthru="true"/>
-        <exec command="cd ${build.release_path} &amp;&amp; ${php.bin} ${composer.command}" passthru="true"/>
-
-        <echo msg="Creating archive..."/>
-        <tar destfile="${build.archive_path}" compression="gzip">
-            <fileset dir="${build.release_path}">
-                <include name="*"/>
-            </fileset>
-        </tar>
-
-        <echo msg="Build process is done."/>
-    </target>
-
-    <target name="build:parameters" depends="variables">
-        <available file="build.parameters.properties" property="build.parameters.properties.exists"/>
+    <!---
+        Builds parameters.yml file if build.parameters.properties exists otherwise composer will build it
+    -->
+    <target name="build:parameters">
+        <available file="build.parameters.${environment}.properties" property="build.parameters.properties.exists"/>
         <if>
             <equals arg1="${build.parameters.properties.exists}" arg2="true"/>
             <then>
                 <echo msg="Building parameters file..."/>
-                <property file="build.parameters.properties"/>
-                <copy file="${build.release_path}/config/parameters.yml.dist" tofile="${build.release_path}/config/parameters.yml" overwrite="true">
+                <property file="build.parameters.properties" override="true"/>
+                <copy file="${build.release_path}/config/parameters.yml.dist"
+                      tofile="${build.release_path}/config/parameters.yml" overwrite="true">
                     <filterchain>
                         <replacetokens begintoken="##" endtoken="##">
-                            <token key="DATABASE_HOST" value="${build.parameters.database_host}" />
-                            <token key="DATABASE_PORT" value="${build.parameters.database_port}" />
-                            <token key="DATABASE_NAME" value="${build.parameters.database_name}" />
-                            <token key="DATABASE_USER" value="${build.parameters.database_user}" />
-                            <token key="DATABASE_PASSWORD" value="${build.parameters.database_password}" />
-                            <token key="MAILER_TRANSPORT" value="${build.parameters.mailer_transport}" />
-                            <token key="MAILER_HOST" value="${build.parameters.mailer_host}" />
-                            <token key="MAILER_PORT" value="${build.parameters.mailer_port}" />
-                            <token key="MAILER_ENCRYPTION" value="${build.parameters.mailer_encryption}" />
-                            <token key="MAILER_USER" value="${build.parameters.mailer_user}" />
-                            <token key="MAILER_PASSWORD" value="${build.parameters.mailer_password}" />
-                            <token key="WEB_BACKEND_PREFIX" value="${build.parameters.web_backend_prefix}" />
-                            <token key="LOCALE" value="${build.parameters.locale}" />
-                            <token key="SECRET" value="${build.parameters.secret}" />
-                            <token key="INSTALLED" value="${build.parameters.installed}" />
+                            <token key="DATABASE_HOST" value="${build.parameters.database_host}"/>
+                            <token key="DATABASE_PORT" value="${build.parameters.database_port}"/>
+                            <token key="DATABASE_NAME" value="${build.parameters.database_name}"/>
+                            <token key="DATABASE_USER" value="${build.parameters.database_user}"/>
+                            <token key="DATABASE_PASSWORD" value="${build.parameters.database_password}"/>
+                            <token key="MAILER_TRANSPORT" value="${build.parameters.mailer_transport}"/>
+                            <token key="MAILER_HOST" value="${build.parameters.mailer_host}"/>
+                            <token key="MAILER_PORT" value="${build.parameters.mailer_port}"/>
+                            <token key="MAILER_ENCRYPTION" value="${build.parameters.mailer_encryption}"/>
+                            <token key="MAILER_USER" value="${build.parameters.mailer_user}"/>
+                            <token key="MAILER_PASSWORD" value="${build.parameters.mailer_password}"/>
+                            <token key="WEB_BACKEND_PREFIX" value="${build.parameters.web_backend_prefix}"/>
+                            <token key="LOCALE" value="${build.parameters.locale}"/>
+                            <token key="SECRET" value="${build.parameters.secret}"/>
+                            <token key="INSTALLED" value="${build.parameters.installed}"/>
                         </replacetokens>
                     </filterchain>
                 </copy>
@@ -128,25 +199,36 @@
         </if>
     </target>
 
+    <!---
+        Build environment specific files
+    -->
     <target name="build:environment">
         <echo msg="Building environment..."/>
 
         <property name="build.htaccess_suffix" value="_dev"/>
         <if>
-            <equals arg1="${build.environment}" arg2="prod"/>
+            <equals arg1="${environment}" arg2="prod"/>
             <then>
                 <property name="build.htaccess_suffix" value=""/>
             </then>
         </if>
-        <copy file="${build.release_path}/web/.htaccess.dist" tofile="${build.release_path}/web/.htaccess" overwrite="true">
+        <copy file="${build.release_path}/public/.htaccess.dist" tofile="${build.release_path}/public/.htaccess"
+              overwrite="true">
             <filterchain>
                 <replacetokens begintoken="##" endtoken="##">
-                    <token key="ENVIRONMENT" value="${build.htaccess_suffix}" />
+                    <token key="ENVIRONMENT" value="${build.htaccess_suffix}"/>
                 </replacetokens>
             </filterchain>
         </copy>
     </target>
 
+    <!---
+        DEPLOY SECTION
+    -->
+
+    <!---
+        Main deployment executor
+    -->
     <target name="deploy" depends="variables">
         <echo msg="Checking for build (${build.archive_path})..."/>
         <available file="${build.archive_path}" property="build.exists"/>
@@ -161,32 +243,39 @@
         </if>
         <echo msg="Deploying build..."/>
         <phingcall target="deploy:upload"/>
+        <phingcall target="deploy:shared"/>
+        <phingcall target="deploy:ssl"/>
+        <phingcall target="deploy:docker"/>
+        <phingcall target="deploy:release"/>
     </target>
 
+    <!---
+        This task deploys files into a server
+    -->
     <target name="deploy:upload" hidden="true">
         <echo>Preparing directories</echo>
-        <phingcall target="deploy:command">
-            <property name="command" value="rm -Rf ${deploy.releases_dir}/${build.release}"/>
-        </phingcall>
-        <phingcall target="deploy:command">
-            <property name="command" value="mkdir -p ${deploy.releases_dir}/${build.release}"/>
-        </phingcall>
+        <echo msg="ssh -oStrictHostKeyChecking=no -p ${deploy.port} ${deploy.user}@${deploy.host}" />
+        <exec
+                command="ssh -oStrictHostKeyChecking=no -p ${deploy.port} ${deploy.user}@${deploy.host} 'mkdir -p ${deploy.releases_path}/${build.release}'"
+                passthru="true"
+        />
 
         <echo>Copying package</echo>
-        <scp host="${deploy.host}"
-             port="${deploy.port}"
-             username="${deploy.username}"
-             password="${deploy.password}"
-             todir="${deploy.path}/${deploy.releases_dir}"
-             file="${build.archive_path}"/>
-
+        <exec command="scp -oStrictHostKeyChecking=no -P${deploy.port} ${build.archive_path} ${deploy.user}@${deploy.host}:/tmp/${build.archive}" passthru="true" checkreturn="true"/>
         <echo>Extracting package</echo>
         <phingcall target="deploy:command">
-            <property name="command"
-                      value="cd ${deploy.releases_dir} &amp;&amp; tar -xzf ${build.archive} -C ./${build.release}"/>
+            <property
+                    name="command"
+                    value="tar -xzf /tmp/${build.archive} -C ${deploy.releases_path}/${build.release}"
+            />
         </phingcall>
+    </target>
 
-        <echo>Creating symbolic links</echo>
+    <!---
+        Link shared folders
+    -->
+    <target name="deploy:shared" hidden="true">
+        <echo>Creating symbolic links...</echo>
         <phingcall target="deploy:symlink">
             <property name="source" value="../../../${deploy.shared_dir}/var/attachment"/>
             <property name="destination" value="${deploy.releases_dir}/${build.release}/var/attachment"/>
@@ -198,10 +287,6 @@
         <phingcall target="deploy:symlink">
             <property name="source" value="../../../${deploy.shared_dir}/var/logs"/>
             <property name="destination" value="${deploy.releases_dir}/${build.release}/var/logs"/>
-        </phingcall>
-        <phingcall target="deploy:symlink">
-            <property name="source" value="../../../${deploy.shared_dir}/var/sessions"/>
-            <property name="destination" value="${deploy.releases_dir}/${build.release}/var/sessions"/>
         </phingcall>
         <phingcall target="deploy:symlink">
             <property name="source" value="../../../${deploy.shared_dir}/var/import_export"/>
@@ -219,31 +304,139 @@
             <property name="source" value="../../../${deploy.shared_dir}/public/uploads"/>
             <property name="destination" value="${deploy.releases_dir}/${build.release}/public/uploads"/>
         </phingcall>
+    </target>
+
+    <!---
+        SSL keys transfer if they exist in environment
+    -->
+    <target name="deploy:ssl" hidden="true">
+        <condition property="isSSLApplicable">
+            <and>
+                <isset property="deploy.reference"/>
+                <isset property="env.SSL_KEY"/>
+                <isset property="env.SSL_CRT"/>
+            </and>
+        </condition>
+        <if>
+            <equals arg1="${isSSLApplicable}" arg2="true"/>
+            <then>
+                <echo>Generating SSL...</echo>
+                <phingcall target="deploy:command">
+                    <property name="command" value="mkdir -p ${deploy.path}/ssl/{private,certs}"/>
+                </phingcall>
+                <phingcall target="deploy:command">
+                    <property name="command" value="echo '${env.SSL_KEY}' > ${deploy.path}/ssl/private/${deploy.reference}.key"/>
+                </phingcall>
+                <phingcall target="deploy:command">
+                    <property name="command" value="echo '${env.SSL_CRT}' > ${deploy.path}/ssl/certs/${deploy.reference}.crt"/>
+                </phingcall>
+                <echo msg="SSL deployed"/>
+            </then>
+            <else>
+                <echo msg="No SSL to deploy"/>
+            </else>
+        </if>
+    </target>
+
+    <!---
+        Launching docker
+    -->
+    <target name="deploy:docker" hidden="true">
+        <condition property="isDockerApplicable">
+            <and>
+                <isset property="deploy.reference"/>
+                <isset property="env.DOCKER_USERNAME"/>
+                <isset property="env.DOCKER_PASSWORD"/>
+                <isset property="env.DOCKER_REGISTRY"/>
+            </and>
+        </condition>
+        <if>
+            <equals arg1="${isDockerApplicable}" arg2="true"/>
+            <then>
+                <echo>Initiating docker...</echo>
+                <exec command="scp -P${deploy.port} ./docker-compose.yml ${deploy.user}@${deploy.host}:${deploy.path}/docker-compose.yml" passthru="true" checkreturn="true"/>
+                <exec command="scp -P${deploy.port} -r ./.docker ${deploy.user}@${deploy.host}:${deploy.path}" passthru="true" checkreturn="true"/>
+                <phingcall target="deploy:command">
+                    <property name="command" value="docker login -u ${env.DOCKER_USERNAME} -p ${env.DOCKER_PASSWORD} ${env.DOCKER_REGISTRY}"/>
+                </phingcall>
+                <phingcall target="deploy:command">
+                    <property name="command" value="docker-compose pull &amp;&amp; docker-compose up -d --force-recreate"/>
+                </phingcall>
+                <phingcall target="deploy:docker:command">
+                    <property name="command" value="groupadd ${deploy.user} &amp;&amp; useradd -g ${deploy.user} ${deploy.user}"/>
+                </phingcall>
+                <phingcall target="deploy:docker:command">
+                    <property name="user" value="${deploy.user}"/>
+                    <property name="command" value="cd ${deploy.release_path}/app &amp;&amp; sh warmup.sh ${environment}"/>
+                </phingcall>
+                <phingcall target="deploy:docker:command">
+                    <property name="command" value="chmod 0777 -R ${deploy.shared_path}/web/{.,media,uploads,images}"/>
+                </phingcall>
+                <phingcall target="deploy:docker:command">
+                    <property name="command" value="chmod 0777 -R ${deploy.shared_path}/app/{cache,logs,attachment,import_export,sessions}"/>
+                </phingcall>
+                <phingcall target="deploy:docker:command">
+                    <property name="command" value="chmod 0777 -R ${deploy.release_path}/web/bundles"/>
+                </phingcall>
+                <phingcall target="deploy:docker:command">
+                    <property name="command" value="chmod 0777 ${deploy.release_path}/app/console"/>
+                </phingcall>
+                <phingcall target="deploy:docker:command">
+                    <property name="command" value="service supervisor start &amp;&amp; service cron start"/>
+                </phingcall>
+                <echo msg="Docker was deployed"/>
+            </then>
+            <else>
+                <echo msg="Docker is not configured"/>
+            </else>
+        </if>
+    </target>
+
+    <!---
+        Releasing current deployment
+    -->
+    <target name="deploy:release" hidden="true">
         <phingcall target="deploy:symlink">
             <property name="source" value="./${deploy.releases_dir}/${build.release}"/>
             <property name="destination" value="${deploy.docroot_dir}"/>
         </phingcall>
     </target>
 
+    <!---
+        HELPER COMMANDS
+    -->
+
     <target name="deploy:command" hidden="true">
         <echo>Executing command '${command}' in ${deploy.path}</echo>
-        <ssh host="${deploy.host}"
-             port="${deploy.port}"
-             username="${deploy.username}"
-             password="${deploy.password}"
-             command="cd ${deploy.path} &amp;&amp; ${command}"
-             failonerror="true"
+        <exec
+                command="ssh -oStrictHostKeyChecking=no -p ${deploy.port} ${deploy.user}@${deploy.host} &quot;cd ${deploy.path} &amp;&amp; ${command}&quot;"
+                passthru="true"
+                checkreturn="true"
+        />
+    </target>
+
+    <target name="deploy:docker:command" hidden="true">
+        <echo>Executing docker command '${command}'</echo>
+        <property name="dockerUserParameterString" value="" override="true"/>
+        <if>
+            <isset property="user"/>
+            <then>
+                <property name="dockerUserParameterString" value="-u ${deploy.user} " override="true"/>
+            </then>
+        </if>
+        <exec
+                command="ssh -oStrictHostKeyChecking=no -p ${deploy.port} ${deploy.user}@${deploy.host} &quot;docker container exec ${dockerUserParameterString}${deploy.reference}_web bash -c '${command}'&quot;"
+                passthru="true"
+                checkreturn="true"
         />
     </target>
 
     <target name="deploy:symlink" hidden="true">
         <echo>Creating symlink '${source}' to '${destination}'</echo>
-        <ssh host="${deploy.host}"
-             port="${deploy.port}"
-             username="${deploy.username}"
-             password="${deploy.password}"
-             command="cd ${deploy.path} &amp;&amp; rm -Rf ${destination} &amp;&amp; ln -sf ${source} ${destination}"
-             failonerror="true"
+        <exec
+                command="ssh -oStrictHostKeyChecking=no -p ${deploy.port} ${deploy.user}@${deploy.host} &quot;cd ${deploy.path} &amp;&amp; rm -Rf ${destination} &amp;&amp; ln -sf ${source} ${destination}&quot;"
+                passthru="true"
+                checkreturn="true"
         />
     </target>
 </project>

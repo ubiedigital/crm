@@ -2,14 +2,9 @@ php.bin = /usr/bin/php7.1
 composer.command = composer.phar install --prefer-dist --no-dev
 
 deploy.host = 719629.s.dedikuoti.lt
-deploy.port = 21
+deploy.port = 22
 deploy.username = username
-deploy.password = secret
-deploy.key.private = /home/user/.ssh/id_rsa
-deploy.key.public = /home/user/.ssh/id_rsa.pub
-deploy.key.passphrase = secret
+deploy.path = /var/www
 deploy.releases_dir = ./web/releases
 deploy.docroot_dir = ./web/current
 deploy.shared_dir = ./web/shared
-deploy.group = client1
-deploy.user = web2

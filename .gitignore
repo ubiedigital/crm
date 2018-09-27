@@ -4,9 +4,9 @@
 /.idea
 /node_modules
 /composer.phar
-build.properties
-build.parameters.properties
 composer.lock
+build.*.properties
+build.parameters.*.properties
 behat.yml
 /var/*
 !var/cache/
