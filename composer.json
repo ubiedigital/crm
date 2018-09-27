@@ -61,21 +61,22 @@
     }
   },
   "scripts": {
-    "post-install-cmd": [
+    "warmup-scripts": [
       "Incenteev\\ParameterHandler\\ScriptHandler::buildParameters",
       "Sensio\\Bundle\\DistributionBundle\\Composer\\ScriptHandler::buildBootstrap",
       "Sensio\\Bundle\\DistributionBundle\\Composer\\ScriptHandler::installRequirementsFile",
       "Oro\\Bundle\\InstallerBundle\\Composer\\ScriptHandler::setPermissions",
       "Oro\\Bundle\\InstallerBundle\\Composer\\ScriptHandler::installAssets",
-      "Oro\\Bundle\\InstallerBundle\\Composer\\ScriptHandler::setAssetsVersion"
+      "Oro\\Bundle\\InstallerBundle\\Composer\\ScriptHandler::setAssetsVersion",
+      "Oro\\Bundle\\InstallerBundle\\Composer\\ScriptHandler::setAssetsVersion",
+      "php bin/console assets:install",
+      "php bin/console assetic:dump"
+    ],
+    "post-install-cmd": [
+      "@warmup-scripts"
     ],
     "post-update-cmd": [
-      "Incenteev\\ParameterHandler\\ScriptHandler::buildParameters",
-      "Sensio\\Bundle\\DistributionBundle\\Composer\\ScriptHandler::buildBootstrap",
-      "Sensio\\Bundle\\DistributionBundle\\Composer\\ScriptHandler::installRequirementsFile",
-      "Oro\\Bundle\\InstallerBundle\\Composer\\ScriptHandler::setPermissions",
-      "Oro\\Bundle\\InstallerBundle\\Composer\\ScriptHandler::installAssets",
-      "Oro\\Bundle\\InstallerBundle\\Composer\\ScriptHandler::setAssetsVersion"
+      "@warmup-scripts"
     ]
   },
   "minimum-stability": "dev",

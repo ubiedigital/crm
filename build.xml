@@ -142,6 +142,7 @@
                 <exclude name="var/import_export/*"/>
                 <exclude name="var/import_export"/>
                 <exclude name="public/bundles/**"/>
+                <exclude name="public/bundles"/>
                 <exclude name="public/images/**"/>
                 <exclude name="public/images"/>
                 <exclude name="public/media/**"/>
@@ -149,7 +150,11 @@
                 <exclude name="public/uploads/**"/>
                 <exclude name="public/uploads"/>
                 <exclude name="build/**"/>
+                <exclude name="build"/>
+                <exclude name="node_modules/**"/>
+                <exclude name="node_modules"/>
                 <exclude name="vendor/**"/>
+                <exclude name="vendor"/>
                 <exclude name=".idea/**"/>
                 <exclude name=".docker/**"/>
                 <exclude name=".docker"/>
@@ -172,7 +177,7 @@
             <equals arg1="${build.parameters.properties.exists}" arg2="true"/>
             <then>
                 <echo msg="Building parameters file..."/>
-                <property file="build.parameters.properties" override="true"/>
+                <property file="build.parameters.${environment}.properties" override="true"/>
                 <copy file="${build.release_path}/config/parameters.yml.dist"
                       tofile="${build.release_path}/config/parameters.yml" overwrite="true">
                     <filterchain>
@@ -246,6 +251,7 @@
         <phingcall target="deploy:shared"/>
         <phingcall target="deploy:ssl"/>
         <phingcall target="deploy:docker"/>
+        <phingcall target="deploy:warmup"/>
         <phingcall target="deploy:release"/>
     </target>
 
@@ -367,7 +373,7 @@
                 </phingcall>
                 <phingcall target="deploy:docker:command">
                     <property name="user" value="${deploy.user}"/>
-                    <property name="command" value="cd ${deploy.release_path}/app &amp;&amp; sh warmup.sh ${environment}"/>
+                    <property name="command" value="cd ${deploy.release_path}/bin &amp;&amp; sh warmup.sh ${php.bin} ${environment}"/>
                 </phingcall>
                 <phingcall target="deploy:docker:command">
                     <property name="command" value="chmod 0777 -R ${deploy.shared_path}/web/{.,media,uploads,images}"/>
@@ -390,6 +396,15 @@
                 <echo msg="Docker is not configured"/>
             </else>
         </if>
+    </target>
+
+    <!---
+        Warms up procedures
+    -->
+    <target name="deploy:warmup" hidden="true">
+        <phingcall target="deploy:command">
+            <property name="command" value="cd ${deploy.release_path}/bin &amp;&amp; sh warmup.sh ${php.bin} ${environment}"/>
+        </phingcall>
     </target>
 
     <!---
