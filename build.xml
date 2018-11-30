@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<project name="UbieDigital CRM" default="deploy">
+<project name="UbieDigital CRM" default="build">
     <!---
         VARIABLES SECTION
     -->
@@ -12,16 +12,7 @@
     <property name="composer.command" value="composer.phar install --prefer-dist --no-dev"/>
 
     <property name="environment" value="dev" override="true"/>
-
-    <property name="deploy.reference" value="null"/>
-    <property name="deploy.releases_dir" value="releases"/>
-    <property name="deploy.docroot_dir" value="current"/>
-    <property name="deploy.shared_dir" value="shared"/>
-
-    <tstamp>
-        <format property="build.timestamp" pattern="%Y%m%d%H%M%S"/>
-    </tstamp>
-    <property name="build.release" value="${build.timestamp}"/>
+    <property name="release" value="1" override="true"/>
 
     <!---
         Here we process all variables, based on environment and properties file variables
@@ -40,54 +31,16 @@
                 <property name="environment" value="${env.ENVIRONMENT}" override="true"/>
             </then>
         </if>
+        <if>
+            <isset property="env.RELEASE"/>
+            <then>
+                <property name="release" value="${env.RELEASE}" override="true"/>
+            </then>
+        </if>
 
-        <property name="build.archive" value="${build.release}.tar.gz" override="true"/>
-        <property name="build.dir" value="build" override="true"/>
-        <property name="build.path" value="./${build.dir}" override="true"/>
-        <property name="build.release_path" value="${build.path}/${build.release}" override="true"/>
-        <property name="build.archive_path" value="${build.path}/${build.archive}" override="true"/>
-
-        <if>
-            <isset property="env.DEPLOY_HOST"/>
-            <then>
-                <property name="deploy.host" value="${env.DEPLOY_HOST}" override="true"/>
-            </then>
-        </if>
-        <if>
-            <isset property="env.DEPLOY_PORT"/>
-            <then>
-                <property name="deploy.port" value="${env.DEPLOY_PORT}" override="true"/>
-            </then>
-        </if>
-        <if>
-            <isset property="env.DEPLOY_USER"/>
-            <then>
-                <property name="deploy.user" value="${env.DEPLOY_USER}" override="true"/>
-            </then>
-        </if>
-        <if>
-            <isset property="env.DEPLOY_PATH"/>
-            <then>
-                <property name="deploy.path" value="${env.DEPLOY_PATH}" override="true"/>
-            </then>
-        </if>
-        <if>
-            <isset property="env.DEPLOY_REFERENCE"/>
-            <then>
-                <property name="deploy.reference" value="${env.DEPLOY_REFERENCE}" override="true"/>
-            </then>
-        </if>
-        <if>
-            <not>
-                <equals arg1="${deploy.reference}" arg2="null"/>
-            </not>
-            <then>
-                <property name="deploy.path" value="${deploy.path}/${deploy.reference}" override="true"/>
-            </then>
-        </if>
-        <property name="deploy.releases_path" value="${deploy.path}/${deploy.releases_dir}" override="true"/>
-        <property name="deploy.release_path" value="${deploy.releases_path}/${build.release}" override="true"/>
-        <property name="deploy.shared_path" value="${deploy.path}/${deploy.shared_dir}" override="true"/>
+        <property name="build.archive" value="${release}.tar.gz" override="true"/>
+        <property name="build.release_path" value="./build/${release}" override="true"/>
+        <property name="build.archive_path" value="./build/${build.archive}" override="true"/>
 
         <echo msg="Variables has been set"/>
     </target>
@@ -103,9 +56,8 @@
         <phingcall target="build:parameters"/>
         <phingcall target="build:environment"/>
 
-        <echo msg="Running composer install..."/>
+        <echo msg="Downloading composer..."/>
         <exec command="wget https://getcomposer.org/composer.phar -P ${build.release_path}" passthru="true"/>
-        <exec command="cd ${build.release_path} &amp;&amp; ${php.bin} ${composer.command}" passthru="true"/>
 
         <echo msg="Creating archive..."/>
         <tar destfile="${build.archive_path}" compression="gzip">
@@ -172,12 +124,12 @@
         Builds parameters.yml file if build.parameters.properties exists otherwise composer will build it
     -->
     <target name="build:parameters">
-        <available file="build.parameters.${environment}.properties" property="build.parameters.properties.exists"/>
+        <available file="build.${environment}.parameters.properties" property="build.parameters.properties.exists"/>
         <if>
             <equals arg1="${build.parameters.properties.exists}" arg2="true"/>
             <then>
                 <echo msg="Building parameters file..."/>
-                <property file="build.parameters.${environment}.properties" override="true"/>
+                <property file="build.${environment}.parameters.properties" override="true"/>
                 <copy file="${build.release_path}/config/parameters.yml.dist"
                       tofile="${build.release_path}/config/parameters.yml" overwrite="true">
                     <filterchain>
@@ -225,233 +177,5 @@
                 </replacetokens>
             </filterchain>
         </copy>
-    </target>
-
-    <!---
-        DEPLOY SECTION
-    -->
-
-    <!---
-        Main deployment executor
-    -->
-    <target name="deploy" depends="variables">
-        <echo msg="Checking for build (${build.archive_path})..."/>
-        <available file="${build.archive_path}" property="build.exists"/>
-        <if>
-            <not>
-                <equals arg1="${build.exists}" arg2="true"/>
-            </not>
-            <then>
-                <echo msg="Build file does not exist, starting build process..."/>
-                <phingcall target="build"/>
-            </then>
-        </if>
-        <echo msg="Deploying build..."/>
-        <phingcall target="deploy:upload"/>
-        <phingcall target="deploy:shared"/>
-        <phingcall target="deploy:ssl"/>
-        <phingcall target="deploy:docker"/>
-        <phingcall target="deploy:warmup"/>
-        <phingcall target="deploy:release"/>
-    </target>
-
-    <!---
-        This task deploys files into a server
-    -->
-    <target name="deploy:upload" hidden="true">
-        <echo>Preparing directories</echo>
-        <echo msg="ssh -oStrictHostKeyChecking=no -p ${deploy.port} ${deploy.user}@${deploy.host}" />
-        <exec
-                command="ssh -oStrictHostKeyChecking=no -p ${deploy.port} ${deploy.user}@${deploy.host} 'mkdir -p ${deploy.releases_path}/${build.release}'"
-                passthru="true"
-        />
-
-        <echo>Copying package</echo>
-        <exec command="scp -oStrictHostKeyChecking=no -P${deploy.port} ${build.archive_path} ${deploy.user}@${deploy.host}:/tmp/${build.archive}" passthru="true" checkreturn="true"/>
-        <echo>Extracting package</echo>
-        <phingcall target="deploy:command">
-            <property
-                    name="command"
-                    value="tar -xzf /tmp/${build.archive} -C ${deploy.releases_path}/${build.release}"
-            />
-        </phingcall>
-    </target>
-
-    <!---
-        Link shared folders
-    -->
-    <target name="deploy:shared" hidden="true">
-        <echo>Creating symbolic links...</echo>
-        <phingcall target="deploy:symlink">
-            <property name="source" value="../../../${deploy.shared_dir}/var/attachment"/>
-            <property name="destination" value="${deploy.releases_dir}/${build.release}/var/attachment"/>
-        </phingcall>
-        <phingcall target="deploy:symlink">
-            <property name="source" value="../../../${deploy.shared_dir}/var/cache"/>
-            <property name="destination" value="${deploy.releases_dir}/${build.release}/var/cache"/>
-        </phingcall>
-        <phingcall target="deploy:symlink">
-            <property name="source" value="../../../${deploy.shared_dir}/var/logs"/>
-            <property name="destination" value="${deploy.releases_dir}/${build.release}/var/logs"/>
-        </phingcall>
-        <phingcall target="deploy:symlink">
-            <property name="source" value="../../../${deploy.shared_dir}/var/import_export"/>
-            <property name="destination" value="${deploy.releases_dir}/${build.release}/var/import_export"/>
-        </phingcall>
-        <phingcall target="deploy:symlink">
-            <property name="source" value="../../../${deploy.shared_dir}/public/images"/>
-            <property name="destination" value="${deploy.releases_dir}/${build.release}/public/images"/>
-        </phingcall>
-        <phingcall target="deploy:symlink">
-            <property name="source" value="../../../${deploy.shared_dir}/public/media"/>
-            <property name="destination" value="${deploy.releases_dir}/${build.release}/public/media"/>
-        </phingcall>
-        <phingcall target="deploy:symlink">
-            <property name="source" value="../../../${deploy.shared_dir}/public/uploads"/>
-            <property name="destination" value="${deploy.releases_dir}/${build.release}/public/uploads"/>
-        </phingcall>
-    </target>
-
-    <!---
-        SSL keys transfer if they exist in environment
-    -->
-    <target name="deploy:ssl" hidden="true">
-        <condition property="isSSLApplicable">
-            <and>
-                <isset property="deploy.reference"/>
-                <isset property="env.SSL_KEY"/>
-                <isset property="env.SSL_CRT"/>
-            </and>
-        </condition>
-        <if>
-            <equals arg1="${isSSLApplicable}" arg2="true"/>
-            <then>
-                <echo>Generating SSL...</echo>
-                <phingcall target="deploy:command">
-                    <property name="command" value="mkdir -p ${deploy.path}/ssl/{private,certs}"/>
-                </phingcall>
-                <phingcall target="deploy:command">
-                    <property name="command" value="echo '${env.SSL_KEY}' > ${deploy.path}/ssl/private/${deploy.reference}.key"/>
-                </phingcall>
-                <phingcall target="deploy:command">
-                    <property name="command" value="echo '${env.SSL_CRT}' > ${deploy.path}/ssl/certs/${deploy.reference}.crt"/>
-                </phingcall>
-                <echo msg="SSL deployed"/>
-            </then>
-            <else>
-                <echo msg="No SSL to deploy"/>
-            </else>
-        </if>
-    </target>
-
-    <!---
-        Launching docker
-    -->
-    <target name="deploy:docker" hidden="true">
-        <condition property="isDockerApplicable">
-            <and>
-                <isset property="deploy.reference"/>
-                <isset property="env.DOCKER_USERNAME"/>
-                <isset property="env.DOCKER_PASSWORD"/>
-                <isset property="env.DOCKER_REGISTRY"/>
-            </and>
-        </condition>
-        <if>
-            <equals arg1="${isDockerApplicable}" arg2="true"/>
-            <then>
-                <echo>Initiating docker...</echo>
-                <exec command="scp -P${deploy.port} ./docker-compose.yml ${deploy.user}@${deploy.host}:${deploy.path}/docker-compose.yml" passthru="true" checkreturn="true"/>
-                <exec command="scp -P${deploy.port} -r ./.docker ${deploy.user}@${deploy.host}:${deploy.path}" passthru="true" checkreturn="true"/>
-                <phingcall target="deploy:command">
-                    <property name="command" value="docker login -u ${env.DOCKER_USERNAME} -p ${env.DOCKER_PASSWORD} ${env.DOCKER_REGISTRY}"/>
-                </phingcall>
-                <phingcall target="deploy:command">
-                    <property name="command" value="docker-compose pull &amp;&amp; docker-compose up -d --force-recreate"/>
-                </phingcall>
-                <phingcall target="deploy:docker:command">
-                    <property name="command" value="groupadd ${deploy.user} &amp;&amp; useradd -g ${deploy.user} ${deploy.user}"/>
-                </phingcall>
-                <phingcall target="deploy:docker:command">
-                    <property name="user" value="${deploy.user}"/>
-                    <property name="command" value="cd ${deploy.release_path}/bin &amp;&amp; sh warmup.sh ${php.bin} ${environment}"/>
-                </phingcall>
-                <phingcall target="deploy:docker:command">
-                    <property name="command" value="chmod 0777 -R ${deploy.shared_path}/web/{.,media,uploads,images}"/>
-                </phingcall>
-                <phingcall target="deploy:docker:command">
-                    <property name="command" value="chmod 0777 -R ${deploy.shared_path}/app/{cache,logs,attachment,import_export,sessions}"/>
-                </phingcall>
-                <phingcall target="deploy:docker:command">
-                    <property name="command" value="chmod 0777 -R ${deploy.release_path}/web/bundles"/>
-                </phingcall>
-                <phingcall target="deploy:docker:command">
-                    <property name="command" value="chmod 0777 ${deploy.release_path}/app/console"/>
-                </phingcall>
-                <phingcall target="deploy:docker:command">
-                    <property name="command" value="service supervisor start &amp;&amp; service cron start"/>
-                </phingcall>
-                <echo msg="Docker was deployed"/>
-            </then>
-            <else>
-                <echo msg="Docker is not configured"/>
-            </else>
-        </if>
-    </target>
-
-    <!---
-        Warms up procedures
-    -->
-    <target name="deploy:warmup" hidden="true">
-        <phingcall target="deploy:command">
-            <property name="command" value="cd ${deploy.release_path}/bin &amp;&amp; sh warmup.sh ${php.bin} ${environment}"/>
-        </phingcall>
-    </target>
-
-    <!---
-        Releasing current deployment
-    -->
-    <target name="deploy:release" hidden="true">
-        <phingcall target="deploy:symlink">
-            <property name="source" value="./${deploy.releases_dir}/${build.release}"/>
-            <property name="destination" value="${deploy.docroot_dir}"/>
-        </phingcall>
-    </target>
-
-    <!---
-        HELPER COMMANDS
-    -->
-
-    <target name="deploy:command" hidden="true">
-        <echo>Executing command '${command}' in ${deploy.path}</echo>
-        <exec
-                command="ssh -oStrictHostKeyChecking=no -p ${deploy.port} ${deploy.user}@${deploy.host} &quot;cd ${deploy.path} &amp;&amp; ${command}&quot;"
-                passthru="true"
-                checkreturn="true"
-        />
-    </target>
-
-    <target name="deploy:docker:command" hidden="true">
-        <echo>Executing docker command '${command}'</echo>
-        <property name="dockerUserParameterString" value="" override="true"/>
-        <if>
-            <isset property="user"/>
-            <then>
-                <property name="dockerUserParameterString" value="-u ${deploy.user} " override="true"/>
-            </then>
-        </if>
-        <exec
-                command="ssh -oStrictHostKeyChecking=no -p ${deploy.port} ${deploy.user}@${deploy.host} &quot;docker container exec ${dockerUserParameterString}${deploy.reference}_web bash -c '${command}'&quot;"
-                passthru="true"
-                checkreturn="true"
-        />
-    </target>
-
-    <target name="deploy:symlink" hidden="true">
-        <echo>Creating symlink '${source}' to '${destination}'</echo>
-        <exec
-                command="ssh -oStrictHostKeyChecking=no -p ${deploy.port} ${deploy.user}@${deploy.host} &quot;cd ${deploy.path} &amp;&amp; rm -Rf ${destination} &amp;&amp; ln -sf ${source} ${destination}&quot;"
-                passthru="true"
-                checkreturn="true"
-        />
     </target>
 </project>

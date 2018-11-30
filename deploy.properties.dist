@@ -1,0 +1,10 @@
+php.bin = /usr/bin/php7.1
+composer.command = composer.phar install --prefer-dist --no-dev
+
+deploy.host = null
+deploy.port = null
+deploy.username = null
+deploy.path = null
+deploy.releases_dir = ./web/releases
+deploy.docroot_dir = ./web/current
+deploy.shared_dir = ./web/shared
