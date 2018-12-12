@@ -1,0 +1,5 @@
+ubie.oro:
+    product_composition:
+        related_items:
+            component_product:
+                relation_already_exists: "Relation between products already exists."

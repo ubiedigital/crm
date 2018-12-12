@@ -1,0 +1,5 @@
+oro_product_composition:
+    resource:     "@UbieOroProductCompositionBundle/Controller/ProductCompositionController.php"
+    type:         annotation
+    prefix:       /product-composition
+

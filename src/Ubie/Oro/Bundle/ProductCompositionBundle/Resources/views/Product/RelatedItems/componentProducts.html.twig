@@ -1,0 +1,38 @@
+{% import 'OroDataGridBundle::macros.html.twig' as dataGrid %}
+
+{% set gridName = 'products-component-products-edit' %}
+
+{% set relatedGridParams = {
+    relatedItemsIds: get_component_products_ids(entity),
+    _parameters: {
+        data_in: [],
+        data_not_in: []
+    }
+} %}
+
+{% if form.appendComponent.vars.value is not empty %}
+    {% set relatedGridParams = relatedGridParams|merge({
+        _parameters: relatedGridParams._parameters|merge({
+            data_in: form.appendComponent.vars.value|split(',')
+        })
+    }) %}
+{% endif %}
+{% if form.removeComponent.vars.value is not empty %}
+    {% set relatedGridParams = relatedGridParams|merge({
+        _parameters: relatedGridParams._parameters|merge({
+            data_not_in: form.removeComponent.vars.value|split(',')
+        })
+    }) %}
+{% endif %}
+
+<div id="component-products-block">
+    {{ form_widget(form.appendComponent, {'id': 'productAppendComponent'}) }}
+    {{ form_widget(form.removeComponent, {'id': 'productRemoveComponent'}) }}
+    {{ placeholder('oro_product_component_products_buttons', {
+        'entity':  entity,
+        'componentProductsLimit': componentProductsLimit,
+        'gridName': gridName
+    }) }}
+    {{ dataGrid.renderGrid(gridName, relatedGridParams) }}
+    {{ placeholder('oro_product_component_items_edit', {'entity':  entity}) }}
+</div>

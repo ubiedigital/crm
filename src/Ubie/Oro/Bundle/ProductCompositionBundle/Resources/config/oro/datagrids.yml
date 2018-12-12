@@ -1,0 +1,23 @@
+datagrids:
+    products-component-products-view:
+        extends: products-related-items-view
+
+    products-component-products-edit:
+        extends: products-related-items-edit
+        options:
+            rowSelection:
+                dataField: id
+                columnName: isRelated
+                selectors:
+                    included: '#productAppendComponent'
+                    excluded: '#productRemoveComponent'
+
+    products-component-products-select:
+        extends: products-related-items-select
+        options:
+            rowSelection:
+                dataField: id
+                columnName: isRelated
+                selectors:
+                    included: '#productAppendComponentSelect'
+                    excluded: '#productRemoveComponentSelect'

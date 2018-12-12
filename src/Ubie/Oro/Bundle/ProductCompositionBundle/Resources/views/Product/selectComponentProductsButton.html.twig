@@ -1,0 +1,13 @@
+{% import 'OroProductBundle:Product/RelatedItems:macros.html.twig' as relatedItemsUI %}
+
+<div class="related-items-widget">
+    {{ relatedItemsUI.renderRelatedItemButton(
+        path('oro_product_possible_products_for_component_products', {'id': entity.id}),
+        'ubie.oro.product_composition.widgets.select_component_products.label'|trans,
+        'ubie.oro.product_composition.widgets.select_component_products.title'|trans({'{{ sku }}': entity.sku, '{{ name }}': entity.name}),
+        componentProductsLimit,
+        '#productAppendComponent',
+        '#productRemoveComponent',
+        gridName
+    ) }}
+</div>

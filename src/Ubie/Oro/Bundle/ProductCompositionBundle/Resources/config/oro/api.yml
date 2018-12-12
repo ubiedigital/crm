@@ -1,0 +1,26 @@
+api:
+    entities:
+        Ubie\Oro\Bundle\ProductCompositionBundle\Entity\RelatedItem\ComponentProduct:
+            documentation_resource: '@UbieOroProductCompositionBundle/Resources/doc/api/component_product.md'
+            actions:
+                update:
+                    exclude: true
+                get:
+                    description: 'Get Component Product Relationship'
+                delete:
+                    description: 'Delete Component Product Relationship'
+                get_list:
+                    description: 'Get Component Product Relationships'
+                delete_list:
+                    description: 'Delete Component Product Relationships'
+                create:
+                    description: 'Create Component Product Relationships'
+                    fields:
+                        product:
+                            form_options:
+                                constraints:
+                                    - NotBlank: ~
+                        relatedItem:
+                            form_options:
+                                constraints:
+                                    - NotBlank: ~

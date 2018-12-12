@@ -1,0 +1,6 @@
+acls:
+    oro_component_products_edit:
+        type: action
+        label: oro.product.acl.component_products.edit.label
+        group_name: ""
+        category: "catalog"

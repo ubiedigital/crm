@@ -1,0 +1,110 @@
+system_configuration:
+    groups:
+        component_products:
+            title: ubie.oro.product_composition.system_configuration.groups.component_products.title
+
+    fields:
+        ubie_oro_product_composition.component_products_enabled:
+            data_type: boolean
+            type: Oro\Bundle\ConfigBundle\Form\Type\ConfigCheckbox
+            priority: 100
+            options:
+                label: ubie.oro.product_composition.system_configuration.fields.enable_component_products.label
+
+        ubie_oro_product_composition.component_products_bidirectional:
+            data_type: boolean
+            type: Oro\Bundle\ConfigBundle\Form\Type\ConfigCheckbox
+            priority: 90
+            options:
+                label: ubie.oro.product_composition.system_configuration.fields.component_products_bidirectional.label
+                tooltip: ubie.oro.product_composition.system_configuration.fields.component_products_bidirectional.tooltip
+
+        ubie_oro_product_composition.max_number_of_component_products:
+            data_type: integer
+            type: Symfony\Component\Form\Extension\Core\Type\IntegerType
+            search_type: text
+            priority: 80
+            options:
+                label: ubie.oro.product_composition.system_configuration.fields.max_number_of_component_products.label
+                tooltip: ubie.oro.product_composition.system_configuration.fields.max_number_of_component_products.tooltip
+                constraints:
+                    - NotBlank: ~
+                    - Range:
+                        min: 1
+
+        ubie_oro_product_composition.component_products_max_items:
+            data_type: integer
+            type: Symfony\Component\Form\Extension\Core\Type\IntegerType
+            search_type: text
+            priority: 70
+            options:
+                label: ubie.oro.product_composition.system_configuration.fields.component_products_max_items.label
+                tooltip: ubie.oro.product_composition.system_configuration.fields.component_products_max_items.tooltip
+                constraints:
+                    - NotBlank: ~
+                    - Range:
+                        min: 1
+
+        ubie_oro_product_composition.component_products_min_items:
+            data_type: integer
+            type: Symfony\Component\Form\Extension\Core\Type\IntegerType
+            search_type: text
+            priority: 60
+            options:
+                label: ubie.oro.product_composition.system_configuration.fields.component_products_min_items.label
+                tooltip: ubie.oro.product_composition.system_configuration.fields.component_products_min_items.tooltip
+                constraints:
+                    - NotBlank: ~
+                    - Range:
+                        min: 1
+
+        ubie_oro_product_composition.component_products_show_add_button:
+            data_type: boolean
+            type: Oro\Bundle\ConfigBundle\Form\Type\ConfigCheckbox
+            priority: 50
+            options:
+                label: ubie.oro.product_composition.system_configuration.fields.component_products_show_add_button.label
+                tooltip: ubie.oro.product_composition.system_configuration.fields.component_products_show_add_button.tooltip
+
+        ubie_oro_product_composition.component_products_use_slider_on_mobile:
+            data_type: boolean
+            type: Oro\Bundle\ConfigBundle\Form\Type\ConfigCheckbox
+            priority: 40
+            options:
+                label: ubie.oro.product_composition.system_configuration.fields.component_products_use_slider_on_mobile.label
+                tooltip: ubie.oro.product_composition.system_configuration.fields.component_products_use_slider_on_mobile.tooltip
+
+    tree:
+        system_configuration:
+            commerce:
+                children:
+                    catalog:
+                        children:
+                            related_items:
+                                priority: 100
+                                children:
+                                    component_products:
+                                        children:
+                                            - ubie_oro_product_composition.component_products_enabled
+                                            - ubie_oro_product_composition.component_products_bidirectional
+                                            - ubie_oro_product_composition.max_number_of_component_products
+                                            - ubie_oro_product_composition.component_products_max_items
+                                            - ubie_oro_product_composition.component_products_min_items
+                                            - ubie_oro_product_composition.component_products_show_add_button
+                                            - ubie_oro_product_composition.component_products_use_slider_on_mobile
+        organization_configuration:
+            commerce:
+                children:
+                    catalog:
+                        children:
+                            related_items:
+                                children:
+                                    component_products:
+                                        children:
+                                            - ubie_oro_product_composition.component_products_enabled
+                                            - ubie_oro_product_composition.component_products_bidirectional
+                                            - ubie_oro_product_composition.max_number_of_component_products
+                                            - ubie_oro_product_composition.component_products_max_items
+                                            - ubie_oro_product_composition.component_products_min_items
+                                            - ubie_oro_product_composition.component_products_show_add_button
+                                            - ubie_oro_product_composition.component_products_use_slider_on_mobile

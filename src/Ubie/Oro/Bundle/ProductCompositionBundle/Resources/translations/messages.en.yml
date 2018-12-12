@@ -1,0 +1,49 @@
+ubie.oro:
+    product_composition:
+        label: 'Composition'
+        is_component.label: 'Is Component'
+        component_to_products.label: 'Component Products'
+        component_by_products.label: 'Products that are component to this Product'
+
+        component_products:
+            label: 'Component Products'
+
+        acl:
+            component_products:
+                edit.label: '[Component Products] Edit component products'
+
+        sections:
+            component_products: 'Component Products'
+
+        tabs:
+            component_products: 'Component Products'
+
+        widgets:
+            select_component_products:
+              title: 'Select component products for {{ sku }} - {{ name }}'
+              label: 'Select component products'
+              limit_has_been_reached: 'Limit of component products has been reached'
+
+        system_configuration:
+            groups:
+                component_products.title: 'Component Products'
+            fields:
+                enable_component_products.label: 'Enable Component Products'
+                component_products_bidirectional:
+                    label: 'Assign in Both Directions'
+                    tooltip: 'If this option is enabled, the current product will automatically be added as a component product to all of its component products.'
+                max_number_of_component_products:
+                    label: 'Maximum Number of Assigned Items'
+                    tooltip: 'A limit of component products that may be added to any product.'
+                component_products_max_items:
+                    label: 'Maximum Items'
+                    tooltip: 'The limit of component products that may be added to any product (applied after filtering out the products that are not visible to the current user).'
+                component_products_min_items:
+                    label: 'Minimum Items'
+                    tooltip: 'The minimum number of component products that may be shown to the buyer. If the actual number of products is lower than this value, the component products section is hidden in the storefront for the product.'
+                component_products_show_add_button:
+                    label: 'Show Add Button'
+                    tooltip: 'Enables a buyer to order a component product from the component products section in the main product details. When the option is disabled, a buyer needs to open the component product details before they can add it to the shopping list.'
+                component_products_use_slider_on_mobile:
+                    label: 'Use Slider On Mobile'
+                    tooltip: 'When enabled, one component product is displayed below the main product information. Other component products are accessible using the horizontal slider. Click < and > to slide through the component products.'

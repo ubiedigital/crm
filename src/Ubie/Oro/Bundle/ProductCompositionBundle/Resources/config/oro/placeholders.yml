@@ -1,0 +1,9 @@
+placeholders:
+    placeholders:
+        oro_product_component_products_buttons:
+            items:
+                oro_product_select_component_products_button: ~
+
+    items:
+        oro_product_select_component_products_button:
+            template: UbieOroProductCompositionBundle:Product:selectComponentProductsButton.html.twig

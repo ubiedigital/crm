@@ -1,0 +1,49 @@
+services:
+    oro_product.twig.product_composition_extension:
+        class: 'Ubie\Oro\Bundle\ProductCompositionBundle\Twig\ProductCompositionExtension'
+        public: false
+        arguments: ['@service_container']
+        tags:
+            - { name: twig.extension }
+
+    # COMPONENT PRODUCTS
+    oro_product.related_item.component_product.config_provider:
+        parent: oro_product.related_item.abstract_config_provider
+        class: 'Ubie\Oro\Bundle\ProductCompositionBundle\RelatedItem\ComponentProduct\ComponentProductsConfigProvider'
+
+    oro_product.related_item.component_product.assigner_database_strategy_abstract:
+      abstract: true
+      public: false
+      class: 'Ubie\Oro\Bundle\ProductCompositionBundle\RelatedItem\ComponentProduct\AssignerDatabaseStrategy'
+      arguments: ['@oro_entity.doctrine_helper', '@oro_product.related_item.component_product.config_provider']
+
+    oro_product.related_item.component_product.assigner_strategy:
+      parent: oro_product.related_item.component_product.assigner_database_strategy_abstract
+
+    oro_product.related_item.component_product.assigner_database_strategy:
+      parent: oro_product.related_item.component_product.assigner_database_strategy_abstract
+
+    oro_product.related_item.component_product.finder_strategy:
+        class: 'Ubie\Oro\Bundle\ProductCompositionBundle\RelatedItem\ComponentProduct\FinderDatabaseStrategy'
+        arguments:
+            - '@oro_entity.doctrine_helper'
+            - '@oro_product.related_item.component_product.config_provider'
+
+    oro_product.related_item.component_product.data_provider:
+        class: Oro\Bundle\ProductBundle\Layout\DataProvider\RelatedItem\RelatedItemDataProvider
+        arguments:
+            - '@oro_product.related_item.component_product.finder_strategy'
+            - '@oro_product.related_item.component_product.config_provider'
+            - '@oro_product.restricted_repository.product'
+            - '@oro_ui.user_agent_provider'
+        tags:
+            - { name: layout.data_provider, alias: oro_product_component_products }
+
+    oro_product.related_item.component_product.data_provider.cache_decorator:
+        parent: oro_product.related_item.data_provider.abstract_cache_decorator
+        decorates: oro_product.related_item.component_product.data_provider
+        decoration_priority: 10
+        arguments:
+            - '@oro_product.related_item.component_product.data_provider.cache_decorator.inner'
+            - '@oro.cache.memory_cache_chain'
+            - 'related_item.component_product.%d'

@@ -1,0 +1,16 @@
+parameters:
+    oro_product.entity.component_product.class: Ubie\Oro\Bundle\ProductCompositionBundle\Entity\RelatedItem\ComponentProduct
+
+services:
+    ubie_oro_product_composition.event_listener.related_items_product_edit_listener:
+        class: 'Ubie\Oro\Bundle\ProductCompositionBundle\EventListener\RelatedItemsProductEditListener'
+        arguments:
+            - '@translator'
+            - '@oro_product.related_item.helper.config_helper'
+            - '@security.authorization_checker'
+            - '@oro_product.service.related_items_handler'
+        tags:
+            - { name: kernel.event_listener, event: oro_ui.scroll_data.before.product-edit, method: onProductEdit }
+            - { name: kernel.event_listener, event: oro_ui.scroll_data.before.product-related-items-update, method: onProductEdit }
+            - { name: kernel.event_listener, event: oro.form.update_handler.before_form_data_set.oro_product, method: onFormDataSet }
+            - { name: kernel.event_listener, event: oro.form.update_handler.after_entity_flush.oro_product, method: onFormAfterEntityFlush }
